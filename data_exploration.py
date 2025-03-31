@@ -23,8 +23,6 @@ match_df = match_df.sort_values(by="date") #dunno if this is needed
 match_df["date"] = pd.to_datetime(match_df["date"])
 player_attr_df["date"] = pd.to_datetime(player_attr_df["date"])
 
-print(match_df)
-
 home_player_cols = ["home_player_1", "home_player_2", "home_player_3", "home_player_4", "home_player_5",
                "home_player_6", "home_player_7", "home_player_8", "home_player_9", "home_player_10",
                "home_player_11"]
@@ -93,7 +91,66 @@ def compute_team_ratings(row):
     row["away_team_rating_avrg"] = away_team_rating_avrg / 11
     return row
 
-# match_df = match_df.apply(compute_team_ratings, axis=1) //No point in running this unless we are creating the finalized set of features to be used
+
+def get_prev_5_matches(row): #This can be reused for any features that involve calulcating both teams prev_5_avrg of something, 
+    match_date = row["date"]
+    home_team_api_id = row["home_team_api_id"]
+    away_team_api_id = row["away_team_api_id"]
+
+    home_team_matches = match_df[
+        (match_df["away_team_api_id"] == home_team_api_id) | 
+        (match_df["home_team_api_id"] == home_team_api_id)]
+    
+    away_team_matches = match_df[
+        (match_df["away_team_api_id"] == away_team_api_id) | 
+        (match_df["home_team_api_id"] == away_team_api_id)]
+
+    home_past_matches = home_team_matches[home_team_matches["date"] < match_date]
+    away_past_matches = away_team_matches[away_team_matches["date"] < match_date]
+
+    home_past_matches = home_past_matches.sort_values(by="date", ascending=False)
+    away_past_matches = away_past_matches.sort_values(by="date", ascending=False)
+
+    return home_past_matches.head(5), away_past_matches.head(5)
+
+match_df["home_prev_5_goal_diff"] = None
+match_df["away_prev_5_goal_diff"] = None
+
+def compute_prev_5_goal_diff(row):
+    home_past_matches, away_past_matches = get_prev_5_matches(row)
+    if home_past_matches.shape[0] != 5 or away_past_matches.shape[0] != 5:
+        return row
+
+    home_goal_diff = 0
+    for _, match in home_past_matches.iterrows():
+        if match["home_team_api_id"] == row["home_team_api_id"]:
+            home_goal_diff += match["home_team_goal"] - match["away_team_goal"]
+        else:
+            home_goal_diff += match["away_team_goal"] - match["home_team_goal"]
+
+    away_goal_diff = 0
+    for _, match in away_past_matches.iterrows():
+        if match["home_team_api_id"] == row["away_team_api_id"]:
+            away_goal_diff += match["home_team_goal"] - match["away_team_goal"]
+        else:
+            away_goal_diff += match["away_team_goal"] - match["home_team_goal"]
 
 
-print(match_df)
+    row["home_prev_5_goal_diff"] = home_goal_diff
+    row["away_prev_5_goal_diff"] = away_goal_diff
+    return row
+
+
+
+match_df = match_df.apply(compute_prev_5_goal_diff, axis=1) #This will create some null values as if a team in the match has not played 5 games, it will not calculate the average
+
+match_df = match_df.dropna(subset=["home_prev_5_goal_diff", "away_prev_5_goal_diff"]) 
+
+
+# print(match_df)
+    
+
+#match_df = match_df.apply(compute_team_ratings, axis=1) #No point in running this unless we are creating the finalized set of features to be used
+
+
+# print(match_df)

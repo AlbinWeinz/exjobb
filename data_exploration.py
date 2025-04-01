@@ -3,6 +3,7 @@ import pandas as pd
 import sqlite3 as db
 from pathlib import Path
 import datetime
+import xml.etree.ElementTree as ET
 
 
 current_dir = Path(__file__).parent
@@ -36,6 +37,8 @@ match_df = match_df.drop(match_df.columns[11:55], axis=1) # DROP ALL COORDINATE 
 betting_odds_home = match_df.iloc[:, 41::3]
 betting_oods_draw = match_df.iloc[:, 42::3]
 betting_oods_away = match_df.iloc[:, 43::3]
+
+
 
 
 match_df["betting_odds_home_avrg"] = betting_odds_home.mean(axis=1)
@@ -146,6 +149,72 @@ match_df = match_df.apply(compute_prev_5_goal_diff, axis=1) #This will create so
 
 match_df = match_df.dropna(subset=["home_prev_5_goal_diff", "away_prev_5_goal_diff"]) 
 
+# Function to separate stats for home team and away team
+def calculate_stats_both_teams(xml_document, home_team, away_team, card_type='y'):
+    if not xml_document or xml_document.strip() == "":
+        return 'None', 'None'  # Default values
+
+    try:
+        tree = ET.fromstring(xml_document)  # Parse XML
+    except ET.ParseError:
+        return 'None', 'None'  # If XML is invalid, return 0
+
+    stat_home_team = 0
+    stat_away_team = 0
+
+    if tree.tag == 'card':
+        for child in tree.iter('value'):
+            # Some xml docs have no card_type element in the tree. comment section seems to have that information
+            try:
+                if child.find('comment').text == card_type:
+                    if int(child.find('team').text) == home_team:
+                        stat_home_team += 1
+                    else:
+                        stat_away_team += 1
+            except AttributeError:
+                # Some values in the xml doc don't have team values, so there isn't much we can do at this stage
+                pass
+
+        return stat_home_team, stat_away_team
+
+        # Lets take the last possession stat which is available from the xml doc
+    if tree.tag == 'possession':
+        try:
+            last_value = [child for child in tree.iter('value')][-1]
+            return int(last_value.find('homepos').text), int(last_value.find('awaypos').text)
+        except:
+            return None, None
+
+    for team in [int(stat.text) for stat in tree.findall('value/team')]:
+        if team == home_team:
+            stat_home_team += 1
+        else:
+            stat_away_team += 1
+
+    return stat_home_team, stat_away_team
+
+# Adds columns for stats separated for home team and away team
+match_df[['on_target_shot_home_team','on_target_shot_away_team']] = match_df[['shoton','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['shoton'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['off_target_shot_home_team','off_target_shot_away_team']] = match_df[['shotoff','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['shotoff'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['foul_home_team','foul_away_team']] = match_df[['foulcommit','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['foulcommit'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['yellow_card_home_team','yellow_card_away_team']] = match_df[['card','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['card'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['red_card_home_team','red_card_away_team']] = match_df[['card','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['card'],x['home_team_api_id'],x['away_team_api_id'], card_type='r'), axis = 1,result_type="expand")
+match_df[['crosses_home_team','crosses_away_team']] = match_df[['cross','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['cross'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['corner_home_team','corner_away_team']] = match_df[['corner','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['corner'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['possession_home_team','possession_away_team']] = match_df[['possession','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['possession'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+
+# Filters out all null values
+match_df = match_df[
+    (match_df["on_target_shot_home_team"] != 'None') &
+    (match_df["off_target_shot_home_team"] != 'None') &
+    (match_df["foul_home_team"] != 'None') &
+    (match_df["yellow_card_home_team"] != 'None') &
+    (match_df["red_card_home_team"] != 'None') &
+    (match_df["crosses_home_team"] != 'None') &
+    (match_df["corner_home_team"] != 'None') &
+    (match_df["possession_home_team"] != 'None') &
+    (match_df["possession_home_team"].notna())
+]
 
 # print(match_df)
     
@@ -153,4 +222,4 @@ match_df = match_df.dropna(subset=["home_prev_5_goal_diff", "away_prev_5_goal_di
 #match_df = match_df.apply(compute_team_ratings, axis=1) #No point in running this unless we are creating the finalized set of features to be used
 
 
-# print(match_df)
+#print(match_df)

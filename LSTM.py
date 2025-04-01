@@ -136,6 +136,9 @@ print(match_df["home_prev_5_goal_diff"].isnull().sum())
 # x = x.reshape(x.shape[0], 5, 1)
 # print(x.shape)
 
+
+##DATA NEEDS TO BE SCALED WITH MinMaxScaler
+
 # y_categorical = keras.utils.to_categorical(y, num_classes=3)
 
 # model = keras.Sequential([

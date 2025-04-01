@@ -5,6 +5,10 @@ from pathlib import Path
 import datetime
 
 
+HOME_TEAM_WIN = 1
+AWAY_TEAM_WIN = 2
+DRAW = 0
+
 current_dir = Path(__file__).parent
 input_path = current_dir / "input" / "database.sqlite"
 
@@ -140,6 +144,20 @@ def compute_prev_5_goal_diff(row):
     row["away_prev_5_goal_diff"] = away_goal_diff
     return row
 
+match_df["match_outcome"] = None
+
+def compute_match_outcome(row):
+    home_team_goal = row["home_team_goal"]
+    away_team_goal = row["away_team_goal"]
+    if home_team_goal > away_team_goal:
+        row["match_outcome"] = HOME_TEAM_WIN
+    elif home_team_goal < away_team_goal:
+        row["match_outcome"] = AWAY_TEAM_WIN
+    else:
+        row["match_outcome"] = DRAW
+
+    return row
+
 
 
 match_df = match_df.apply(compute_prev_5_goal_diff, axis=1) #This will create some null values as if a team in the match has not played 5 games, it will not calculate the average
@@ -147,7 +165,9 @@ match_df = match_df.apply(compute_prev_5_goal_diff, axis=1) #This will create so
 match_df = match_df.dropna(subset=["home_prev_5_goal_diff", "away_prev_5_goal_diff"]) 
 
 
-# print(match_df)
+match_df = match_df.apply(compute_match_outcome, axis=1)
+
+print(match_df)
     
 
 #match_df = match_df.apply(compute_team_ratings, axis=1) #No point in running this unless we are creating the finalized set of features to be used

@@ -163,12 +163,11 @@ def compute_match_outcome(row):
 
 
 
-match_df = match_df.apply(compute_prev_5_goal_diff, axis=1) #This will create some null values as if a team in the match has not played 5 games, it will not calculate the average
+match_df = match_df.apply(compute_prev_5_goal_diff, axis=1) #This will create some null values as if a team in the match has not played 5 games, it will not extract the average
 
-match_df = match_df.dropna(subset=["home_prev_5_goal_diff", "away_prev_5_goal_diff"]) 
 
 # Function to separate stats for home team and away team
-def calculate_stats_both_teams(xml_document, home_team, away_team, card_type='y'):
+def extract_stats_both_teams(xml_document, home_team, away_team, card_type='y'):
     if not xml_document or xml_document.strip() == "":
         return 'None', 'None'  # Default values
 
@@ -212,14 +211,14 @@ def calculate_stats_both_teams(xml_document, home_team, away_team, card_type='y'
     return stat_home_team, stat_away_team
 
 # Adds columns for stats separated for home team and away team
-match_df[['on_target_shot_home_team','on_target_shot_away_team']] = match_df[['shoton','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['shoton'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
-match_df[['off_target_shot_home_team','off_target_shot_away_team']] = match_df[['shotoff','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['shotoff'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
-match_df[['foul_home_team','foul_away_team']] = match_df[['foulcommit','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['foulcommit'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
-match_df[['yellow_card_home_team','yellow_card_away_team']] = match_df[['card','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['card'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
-match_df[['red_card_home_team','red_card_away_team']] = match_df[['card','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['card'],x['home_team_api_id'],x['away_team_api_id'], card_type='r'), axis = 1,result_type="expand")
-match_df[['crosses_home_team','crosses_away_team']] = match_df[['cross','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['cross'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
-match_df[['corner_home_team','corner_away_team']] = match_df[['corner','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['corner'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
-match_df[['possession_home_team','possession_away_team']] = match_df[['possession','home_team_api_id','away_team_api_id']].apply(lambda x: calculate_stats_both_teams(x['possession'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['on_target_shot_home_team','on_target_shot_away_team']] = match_df[['shoton','home_team_api_id','away_team_api_id']].apply(lambda x: extract_stats_both_teams(x['shoton'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['off_target_shot_home_team','off_target_shot_away_team']] = match_df[['shotoff','home_team_api_id','away_team_api_id']].apply(lambda x: extract_stats_both_teams(x['shotoff'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['foul_home_team','foul_away_team']] = match_df[['foulcommit','home_team_api_id','away_team_api_id']].apply(lambda x: extract_stats_both_teams(x['foulcommit'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['yellow_card_home_team','yellow_card_away_team']] = match_df[['card','home_team_api_id','away_team_api_id']].apply(lambda x: extract_stats_both_teams(x['card'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['red_card_home_team','red_card_away_team']] = match_df[['card','home_team_api_id','away_team_api_id']].apply(lambda x: extract_stats_both_teams(x['card'],x['home_team_api_id'],x['away_team_api_id'], card_type='r'), axis = 1,result_type="expand")
+match_df[['crosses_home_team','crosses_away_team']] = match_df[['cross','home_team_api_id','away_team_api_id']].apply(lambda x: extract_stats_both_teams(x['cross'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['corner_home_team','corner_away_team']] = match_df[['corner','home_team_api_id','away_team_api_id']].apply(lambda x: extract_stats_both_teams(x['corner'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
+match_df[['possession_home_team','possession_away_team']] = match_df[['possession','home_team_api_id','away_team_api_id']].apply(lambda x: extract_stats_both_teams(x['possession'],x['home_team_api_id'],x['away_team_api_id']), axis = 1,result_type="expand")
 
 # Filters out all null values
 match_df = match_df[
@@ -234,12 +233,56 @@ match_df = match_df[
     (match_df["possession_home_team"].notna())
 ]
 
+
+def compute_prev_5_avrges(row):
+    cols = match_df.columns[49:]
+    for home_col in cols[::2]:
+        home_col_index = match_df.columns.get_loc(home_col)
+        away_col = match_df.columns[home_col_index + 1]
+        home_past_matches, away_past_matches = get_prev_5_matches(row)
+        if home_past_matches.shape[0] != 5 or away_past_matches.shape[0] != 5:
+            row[home_col] = None
+            row[away_col] = None
+            return row
+
+        home_avrg = 0
+        for _, match in home_past_matches.iterrows():
+            if match["home_team_api_id"] == row["home_team_api_id"]:
+                home_avrg += match[home_col]
+            else:
+                home_avrg += match[away_col]
+        home_avrg = home_avrg / 5
+
+        away_avrg = 0
+        for _, match in away_past_matches.iterrows():
+            if match["home_team_api_id"] == row["away_team_api_id"]:
+                away_avrg += match[home_col]
+            else:
+                away_avrg += match[away_col]
+        away_avrg = away_avrg / 5
+
+        row[home_col] = home_avrg
+        row[away_col] = away_avrg
+    return row
+
+
 match_df = match_df.apply(compute_match_outcome, axis=1)
 
+match_df = match_df.apply(compute_prev_5_avrges, axis=1) 
+
+match_df = match_df.dropna(subset=["home_prev_5_goal_diff", "away_prev_5_goal_diff"]) 
+
+
+
+match_df = match_df.apply(compute_team_ratings, axis=1) #No point in running this unless we are creating the finalized set of features to be used
+
+
 print(match_df)
-    
-
-#match_df = match_df.apply(compute_team_ratings, axis=1) #No point in running this unless we are creating the finalized set of features to be used
 
 
-#print(match_df)
+match_df = match_df.drop(match_df.columns[9:41], axis=1)
+match_df = match_df.drop(["stage", "match_api_id"], axis=1)
+output_path = current_dir / "input" / "features.csv"
+match_df.to_csv(output_path, index=False)
+
+print(match_df)

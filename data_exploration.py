@@ -270,19 +270,14 @@ match_df = match_df.apply(compute_match_outcome, axis=1)
 
 match_df = match_df.apply(compute_prev_5_avrges, axis=1) 
 
-match_df = match_df.dropna(subset=["home_prev_5_goal_diff", "away_prev_5_goal_diff"]) 
-
-
+match_df = match_df.dropna(subset=["home_prev_5_goal_diff", "away_prev_5_goal_diff", "on_target_shot_home_team", "on_target_shot_away_team"]) 
 
 match_df = match_df.apply(compute_team_ratings, axis=1) #No point in running this unless we are creating the finalized set of features to be used
 
 
-print(match_df)
 
 
 match_df = match_df.drop(match_df.columns[9:41], axis=1)
 match_df = match_df.drop(["stage", "match_api_id"], axis=1)
 output_path = current_dir / "input" / "features.csv"
 match_df.to_csv(output_path, index=False)
-
-print(match_df)

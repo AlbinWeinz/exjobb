@@ -110,6 +110,7 @@ plt.title("Learning Rate effect on model Accuracy")
 plt.xlabel("Learning Rate")
 plt.ylabel("Validation Accuracy")
 plt.grid(True)
+plt.savefig("lr_effect_on_accuracy.pdf", format="pdf", bbox_inches="tight")
 plt.show()
 
 best_hp = tuner.get_best_hyperparameters(num_trials=1)[0]
